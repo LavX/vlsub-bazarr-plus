@@ -4,7 +4,7 @@ All notable changes to VLSub Bazarr+ are documented here.
 
 Format loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [1.2.7-260424] - 2026-04-24
 
 ### Added
 - Bazarr+ compat endpoint support: rewrites the upstream API host calls to a configurable Bazarr+ host.
