@@ -1,147 +1,65 @@
 --[[
 ================================================================================
-VLSub OpenSubtitles.com Extension for VLC Media Player 3.0+
+VLSub Bazarr+ : VLC extension for self-hosted Bazarr+ subtitle orchestration
 ================================================================================
 
-DESCRIPTION:
-A modern VLC extension for downloading subtitles from OpenSubtitles.com using
-their latest REST API v2. This extension provides smart search capabilities,
-multi-language support, automatic metadata detection, and enhanced performance
-compared to legacy XML-RPC based extensions.
+Proxies subtitle searches and downloads through a Bazarr+ instance over its
+compat REST API. Hard fork, not tracking upstream.
 
-FEATURES:
-- 🔍 Smart Search: Hash-based + name-based search with GuessIt integration
-- 🌐 Multi-language Support: Up to 3 preferred languages with prioritization
-- 🎯 Auto-detection: System locale, timezone, and IP geolocation detection
-- 📱 Modern API: OpenSubtitles.com REST API v2 for better performance
-- 🔄 Auto-updates: Built-in update mechanism
-- 🎬 Smart Metadata: GuessIt API integration for movie/TV show detection
-- 🏆 Quality Indicators: Trusted uploaders, download counts, sync quality
-- 💾 Flexible Download: Auto-load or manual save with language codes
-- 🌍 Country-specific: Intelligent language suggestions
+Install:   https://github.com/LavX/vlsub-bazarr-plus
+Backend:   https://github.com/LavX/bazarr
 
-REQUIREMENTS:
-- VLC Media Player 3.0 or newer
-- OpenSubtitles.com account (free registration required)
-- Internet connection for searching and downloading
-- curl command-line tool (for downloads - usually pre-installed)
+Copyright 2013 Guillaume Le Maout (original vlsub author)
+Copyright 2026 LavX (Bazarr+ hard fork)
 
-INSTALLATION:
-Quick Install (Recommended):
-  macOS/Linux: curl -sSL https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.sh | bash
-  Windows: iwr -useb https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.ps1 | iex
-
-Manual Install:
-1. Download vlsubcom.lua from: https://github.com/opensubtitles/vlsub-opensubtitles-com/releases
-2. Copy to VLC extensions directory:
-   - Windows: %APPDATA%\vlc\lua\extensions\
-   - macOS: ~/Library/Application Support/org.videolan.vlc/lua/extensions/
-   - Linux: ~/.local/share/vlc/lua/extensions/
-3. Restart VLC Media Player
-4. Access via View → VLSub OpenSubtitles.com
-
-USAGE:
-1. Setup: Open VLC → View → VLSub OpenSubtitles.com → Config
-2. Login: Enter your OpenSubtitles.com username and password
-3. Play: Start your video file
-4. Search: Click "🎯 Search by Hash" or "🔍 Search by Name"
-5. Download: Double-click any subtitle to download and load automatically
-
-SUPPORTED LANGUAGES:
-100+ languages including major languages (English, Spanish, French, German,
-Italian, Portuguese, Russian, Chinese, Japanese, Korean), regional variants,
-and all EU languages.
-
-TROUBLESHOOTING:
-- "No results found": Ensure video is local for hash search, try name search
-- "Authentication failed": Verify credentials and internet connection
-- "Download failed": Check quota limits, verify curl installation
-- Extension not visible: Restart VLC, check installation directory
-
-DEBUG LOGGING:
-Enable in VLC: Tools → Preferences → Show settings: All → Advanced →
-Logger verbosity: 2 (Debug)
-
-API COMPARISON:
-                    Legacy vlsub (.org)    VLSub OpenSubtitles.com
-API                 XML-RPC (legacy)       REST API v2 (modern)
-Authentication      Optional               Required (free account)
-Language Selection  Single language        Up to 3 with priority
-Search Methods      Basic hash/name        Hash + Name + GuessIt
-Auto-updates        None                   Built-in system
-Performance         Slower XML parsing     Fast JSON API
-
-TODO:
-
-- Integrate AI translation/transcription (ai.opensubtitles.com)
-- Code cleanup and optimization
-
-PROJECT LINKS:
-Repository: https://github.com/opensubtitles/vlsub-opensubtitles-com/
-Issues: https://github.com/opensubtitles/vlsub-opensubtitles-com/issues
-Documentation: https://github.com/opensubtitles/vlsub-opensubtitles-com/blob/main/docs/
-OpenSubtitles.com: https://www.opensubtitles.com/
-Contact: https://www.opensubtitles.com/en/contact/
-
-================================================================================
-COPYRIGHT & LICENSE:
-================================================================================
-
-Copyright 2025 OpenSubtitles.com
-Based on original work Copyright 2013 Guillaume Le Maout
-
-Authors:
-- OpenSubtitles.com Team
-- Guillaume Le Maout (original vlsub author)
-- Additional Development: Enhanced with assistance from Claude (Anthropic AI)
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-================================================================================
-VERSION HISTORY & CHANGELOG:
-================================================================================
-
-For detailed version history and changelog, see:
-https://github.com/opensubtitles/vlsub-opensubtitles-com/releases
-
-Latest changes can be found in the repository commit history:
-https://github.com/opensubtitles/vlsub-opensubtitles-com/commits/main
-
-================================================================================
-
+Licensed under the GNU General Public License v3 or later.
+See LICENSE in the repository root.
 --]]
 
             --[[ Global var ]]--
 
--- local app_name = "VLSub";
-local app_name = "VLSub OpenSubtitles.com";  
-local app_version = "1.2.7";
+local app_name = "VLSub Bazarr+";
+local app_version = "1.2.7-260424";
 local app_useragent = app_name.." v"..app_version;
 
 local config = {
   api_key = "d3Sba6j6VYnty3ir5T8GXYoAuiLSBf0S",
   cache_languages_duration_seconds = 30 * 24 * 60 * 60, -- 30 days in seconds
-  api_languages_url = "http://api.opensubtitles.com/api/v1/infos/languages",
+  api_languages_url = "http://vlsub.invalid/api/v1/infos/languages",
   token_cache_duration_seconds = 24 * 60 * 60, -- 24 hours in seconds
-  login_api_url = "http://api.opensubtitles.com/api/v1/login",
-  guessit_api_url = "http://api.opensubtitles.com/api/v1/utilities/guessit",
+  login_api_url = "http://vlsub.invalid/api/v1/login",
+  guessit_api_url = "http://vlsub.invalid/api/v1/utilities/guessit",
   cache_guessit_duration_seconds = 7 * 24 * 60 * 60 -- 7 days in seconds (filenames don't change often)
 }
 
+-- Baked-in placeholder API key, used when Bazarr+ override is not set
+local default_api_key = config.api_key
+
+-- Rewrite vlsub.invalid URLs to the Bazarr+ compat endpoint when configured.
+-- Bazarr+ speaks the same contract as the reference placeholder host,
+-- so swapping the scheme+host is enough. We normalize the user's base so it works
+-- whether they enter "http://host:6767" or "http://host:6767/api/v1/".
+local function bazarr_rewrite_url(url)
+  local base = openSub and openSub.option and openSub.option.bazarr_base_url
+  if not base or base == "" then return url end
+  base = string.gsub(base, "/+$", "")        -- drop trailing slashes
+  base = string.gsub(base, "/api/v1$", "")   -- drop /api/v1 if the user included it
+  return (string.gsub(url, "^https?://vlsub%.invalid", base))
+end
+
+-- Swap the active Api-Key header source depending on whether Bazarr+ is targeted.
+local function apply_bazarr_api_key()
+  if openSub and openSub.option
+     and openSub.option.bazarr_api_key and openSub.option.bazarr_api_key ~= "" then
+    config.api_key = openSub.option.bazarr_api_key
+  else
+    config.api_key = default_api_key
+  end
+end
+
 -- Auto-update configuration
 local update_config = {
-  check_url = "https://api.github.com/repos/opensubtitles/vlsub-opensubtitles-com/releases/latest",
+  check_url = "https://api.github.com/repos/LavX/vlsub-bazarr-plus/releases/latest",
   current_version = app_version, -- Uses existing app_version variable
   check_interval_seconds = 24 * 60 * 60, -- 24 hours
   last_check_file = "last_update_check.json"
@@ -186,6 +104,10 @@ local options = {
   progressBarSize = 80,
   debugLogging = false,
   intLang = 'eng',
+  bazarr_base_url = "",       -- Bazarr+ compat endpoint base URL, e.g. http://host:6767/api/v1/
+  bazarr_api_key = "",        -- Bazarr+ compat API token (required)
+  os_username = "bazarr-plus", -- Sent to /login body; Bazarr+ ignores the value but rejects empty payloads
+  os_password = "bazarr-plus", -- Sent to /login body; Bazarr+ ignores the value but rejects empty payloads
   translations_avail = {
     eng = 'English',
     cze = 'Czech',
@@ -207,7 +129,7 @@ local options = {
   },
   translation = {
     int_all = 'All',
-    int_descr = 'Download subtitles from OpenSubtitles.com',
+    int_descr = 'Download subtitles via Bazarr+',
     int_research = 'Search',
     int_config = 'Config',
     int_configuration = 'Configuration',
@@ -239,15 +161,13 @@ local options = {
     int_dowload_manual =  'Manual download',
     int_display_code = 'Save language code in file name',
     int_remove_tag = 'Remove tags',
-    int_use_curl = 'Use curl (<a href="https://github.com/opensubtitles/vlsub-opensubtitles-com/wiki/VLC-Extension-Development-FAQ:-Networking-and-Header-Limitations">info</a>)',
+    int_use_curl = 'Use curl (<a href="https://github.com/LavX/vlsub-bazarr-plus/wiki/VLC-Extension-Development-FAQ:-Networking-and-Header-Limitations">info</a>)',
     int_vlsub_work_dir = 'VLSub working directory',
-    int_os_username = 'OpenSubtitles.com Username',
-    int_os_password = 'OpenSubtitles.com Password',
+    int_bazarr_base_url = 'Bazarr+ Base URL',
+    int_bazarr_api_key = 'Bazarr+ API Key',
     int_help_mess =[[
-      Download subtitles from
-      <a href='http://www.opensubtitles.org/'>
-      opensubtitles.org
-      </a> and display them while watching a video.<br>
+      Download subtitles via your Bazarr+ instance
+      and display them while watching a video.<br>
       <br>
       <b><u>Usage:</u></b><br>
       <br>
@@ -288,7 +208,7 @@ local options = {
       <strong>VLSub is not working with Vlc 2.1.x on
       any platform</strong>
       because the lua "net" module needed to interact
-      with opensubtitles has been
+      with the subtitle API has been
       removed in this release for the extensions.
       <br>
       <strong>Works with Vlc 2.2 on mac and linux.</strong>
@@ -501,73 +421,12 @@ function descriptor()
   return {
     title = app_useragent,
     version = app_version,
-    author = "OpenSubtitles",
-    url = 'http://www.opensubtitles.com/',
+    author = "LavX",
+    url = 'https://github.com/LavX/vlsub-bazarr-plus',
     shortdesc = app_name;
     description = options.translation.int_descr,
     capabilities = {"menu", "input-listener" }
   }
-end
-
-
--- Test function
-local function test_headers()
-  vlc.msg.dbg("[VLSub] ========== HEADER DEBUG CHECK ==========")
-  vlc.msg.dbg("[VLSub] Testing if headers are sent to server...")
-
-  local test_url = "http://www.opensubtitles.org/addons/show_headers.php"
-  vlc.msg.dbg("[VLSub] Making request to: " .. test_url)
-
-  local client = Curl.new()
-  client:add_header("Api-Key", config.api_key)
-  client:add_header("User-Agent", openSub.conf.userAgentHTTP)
-  client:add_header("X-Test-Header", "VLSub-Test-Value")
-  client:set_timeout(10)
-  client:set_retries(1)
-
-  if openSub.session.token and openSub.session.token ~= "" then
-    client:add_header("Authorization", "Bearer " .. openSub.session.token)
-    vlc.msg.dbg("[VLSub] Added Authorization header")
-  else
-    vlc.msg.dbg("[VLSub] No token - testing without Authorization")
-  end
-
-  local res = client:get(test_url)
-
-  if not res then
-    vlc.msg.err("[VLSub] No response from server")
-    return false
-  end
-
-  vlc.msg.dbg("[VLSub] Response status: " .. (res.status or "no status"))
-
-  if not res.body or string.len(res.body) == 0 then
-    vlc.msg.err("[VLSub] Empty response body")
-    return false
-  end
-
-  vlc.msg.dbg("[VLSub] Response body:")
-  vlc.msg.dbg("[VLSub] " .. res.body)
-
-  local has_api_key = string.find(res.body, "Api%-Key") or string.find(res.body, "api%-key")
-  local has_user_agent = string.find(res.body, "User%-Agent") or string.find(res.body, "user%-agent")
-  local has_test_header = string.find(res.body, "X%-Test%-Header") or string.find(res.body, "x%-test%-header")
-  local has_auth = string.find(res.body, "Authorization") or string.find(res.body, "authorization")
-
-  vlc.msg.dbg("[VLSub] ========== HEADER CHECK RESULTS ==========")
-  vlc.msg.dbg("[VLSub] Api-Key: " .. (has_api_key and "YES" or "NO"))
-  vlc.msg.dbg("[VLSub] User-Agent: " .. (has_user_agent and "YES" or "NO"))
-  vlc.msg.dbg("[VLSub] X-Test-Header: " .. (has_test_header and "YES" or "NO"))
-  vlc.msg.dbg("[VLSub] Authorization: " .. (has_auth and "YES" or "NO"))
-  vlc.msg.dbg("[VLSub] ========================================")
-
-  if has_api_key then
-    vlc.msg.dbg("[VLSub] SUCCESS: Headers are sent!")
-    return true
-  else
-    vlc.msg.err("[VLSub] FAILURE: Headers NOT sent!")
-    return false
-  end
 end
 
 
@@ -717,7 +576,7 @@ function activate()
         append_debug_log("Found " .. #detected_locale.suggested_languages .. " suggested languages: " .. table.concat(lang_codes, ", "))
 
         for i, suggestion in ipairs(detected_locale.suggested_languages) do
-          local os_lang = map_to_opensubtitles_language(suggestion.language)
+          local os_lang = map_to_alpha2_lang(suggestion.language)
 
           local found_language = false
           for j, lang_pair in ipairs(openSub.conf.languages) do
@@ -980,7 +839,7 @@ function get_install_instructions(download_url)
     table.insert(instructions, "<b>Option 1 - PowerShell (Recommended):</b>")
     table.insert(instructions, "1. Press Win+R, type 'powershell' and press Enter")
     table.insert(instructions, "2. Copy and paste this command:")
-    table.insert(instructions, "<code>iwr -useb https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.ps1 | iex</code>")
+    table.insert(instructions, "<code>iwr -useb https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.ps1 | iex</code>")
     table.insert(instructions, "")
     table.insert(instructions, "<b>Option 2 - Manual Download:</b>")
     table.insert(instructions, "1. Download: <a href='" .. download_url .. "'>vlsubcom.lua</a>")
@@ -999,7 +858,7 @@ function get_install_instructions(download_url)
     table.insert(instructions, "<b>Option 1 - Automatic (Recommended):</b>")
     table.insert(instructions, "1. Open Terminal")
     table.insert(instructions, "2. Copy and paste this command:")
-    table.insert(instructions, "<code>curl -sSL https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.sh | bash</code>")
+    table.insert(instructions, "<code>curl -sSL https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.sh | bash</code>")
     table.insert(instructions, "")
     table.insert(instructions, "<b>Option 2 - Manual Download:</b>")
     table.insert(instructions, "1. Download: <a href='" .. download_url .. "'>vlsubcom.lua</a>")
@@ -1014,7 +873,7 @@ function get_install_instructions(download_url)
   table.insert(instructions, "")
   table.insert(instructions, "<b>After installation:</b>")
   table.insert(instructions, "• Restart VLC Media Player")
-  table.insert(instructions, "• Access via View → VLSub OpenSubtitles.com")
+  table.insert(instructions, "• Access via View → VLSub Bazarr+")
 
   return table.concat(instructions, "<br>")
 end
@@ -1033,7 +892,7 @@ function show_update_dialog(latest_version, release_notes, download_url)
   dlg = vlc.dialog("VLSub Update Available - " .. latest_version)
 
   -- Row 1: Update notification header with link and version info in compact format
-  dlg:add_label("<a href='https://github.com/opensubtitles/vlsub-opensubtitles-com'><b>VLSub Update Available</b></a> (" .. update_config.current_version .. " => " .. latest_version .. ")", 1, 1, 6, 1)
+  dlg:add_label("<a href='https://github.com/LavX/vlsub-bazarr-plus'><b>VLSub Update Available</b></a> (" .. update_config.current_version .. " => " .. latest_version .. ")", 1, 1, 6, 1)
 
   -- Row 2: Installation instructions
   dlg:add_label("<b>Installation Instructions:</b>", 1, 2, 6, 1)
@@ -1042,7 +901,7 @@ function show_update_dialog(latest_version, release_notes, download_url)
   if openSub.conf.os == "win" then
     -- Windows instructions - compact with 2-line fallback
     dlg:add_label("Open PowerShell as Administrator and run:", 1, 3, 6, 1)
-    dlg:add_label("iwr -useb https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.ps1 | iex", 1, 4, 6, 1)
+    dlg:add_label("iwr -useb https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.ps1 | iex", 1, 4, 6, 1)
     dlg:add_label("If this doesn't work, download <a href='" .. download_url .. "'>vlsubcom.lua</a> and save to:", 1, 5, 6, 1)
     dlg:add_label("%APPDATA%\\vlc\\lua\\extensions\\vlsubcom.lua", 1, 6, 6, 1)
 
@@ -1057,12 +916,12 @@ function show_update_dialog(latest_version, release_notes, download_url)
     end
 
     dlg:add_label("Open Terminal and run:", 1, 3, 6, 1)
-    dlg:add_label("curl -sSL https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.sh | bash", 1, 4, 6, 1)
+    dlg:add_label("curl -sSL https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.sh | bash", 1, 4, 6, 1)
     dlg:add_label("If this doesn't work, download <a href='" .. download_url .. "'>vlsubcom.lua</a> and save to:", 1, 5, 6, 1)
     dlg:add_label(install_path, 1, 6, 6, 1)
   end
 
-  dlg:add_label("Then restart VLC and access via View → VLSub OpenSubtitles.com", 1, 7, 6, 1)
+  dlg:add_label("Then restart VLC and access via View → VLSub Bazarr+", 1, 7, 6, 1)
 
   -- Row 8: What's new section (compact - exactly 6 lines)
   dlg:add_label("<b>What's New in v" .. latest_version .. ":</b>", 1, 8, 6, 1)
@@ -1434,7 +1293,7 @@ function check_for_updates(force_check)
     end
 
     -- Find download URL (look for .lua file in assets)
-    local download_url = "https://github.com/opensubtitles/vlsub-opensubtitles-com/releases/latest"
+    local download_url = "https://github.com/LavX/vlsub-bazarr-plus/releases/latest"
     if release_data.assets then
       for _, asset in ipairs(release_data.assets) do
         if asset.name and string.match(asset.name, "%.lua$") then
@@ -1480,7 +1339,7 @@ function initialize_auto_update()
     return
   end
 
-  -- Don't require full config - we can check for updates even without OpenSubtitles credentials
+  -- Update check is independent of server credentials
   vlc.msg.dbg("[VLSub] Auto-update check starting...")
 
   -- Perform update check in background (non-blocking)
@@ -1602,7 +1461,7 @@ end
 function force_config_until_authenticated()
   if not has_valid_authentication() then
     vlc.msg.dbg("[VLSub] Authentication required - staying in config window")
-    setMessage(error_tag("Please enter valid OpenSubtitles.com credentials and click Save before proceeding."))
+    setMessage(error_tag("Please enter a Bazarr+ Base URL and API Key, then click Save before proceeding."))
     return true -- Stay in config
   end
   return false -- Can proceed
@@ -1647,6 +1506,14 @@ function initialize_languages()
   -- Use built-in languages as fallback
   openSub.conf.languages = sub_languages
   vlc.msg.dbg("[VLSub] Using built-in language list (" .. #sub_languages .. " languages)")
+
+  -- Skip the remote language fetch until Bazarr+ is configured.
+  -- Otherwise first-run init blocks the UI on a synchronous call to
+  -- vlsub.invalid that can't succeed without a valid api-key.
+  if not openSub.option.bazarr_base_url or openSub.option.bazarr_base_url == "" then
+    vlc.msg.dbg("[VLSub] Bazarr+ Base URL not set , keeping built-in language list")
+    return
+  end
 
   -- Try to fetch from API with aggressive timeouts
   vlc.msg.dbg("[VLSub] Attempting to fetch fresh language list from API")
@@ -1813,17 +1680,17 @@ function interface_main()
 end
 
 function interface_config()
-  -- Row 1: OpenSubtitles username
-  dlg:add_label(lang["int_os_username"]..":", 1, 1, 1, 1)
-  input_table['os_username'] = dlg:add_text_input(
-    type(openSub.option.os_username) == "string"
-    and openSub.option.os_username or "", 2, 1, 2, 1)
+  -- Row 1: Bazarr+ base URL
+  dlg:add_label(lang["int_bazarr_base_url"]..":", 1, 1, 1, 1)
+  input_table['bazarr_base_url'] = dlg:add_text_input(
+    type(openSub.option.bazarr_base_url) == "string"
+    and openSub.option.bazarr_base_url or "", 2, 1, 2, 1)
 
-  -- Row 2: OpenSubtitles password
-  dlg:add_label(lang["int_os_password"]..":", 1, 2, 1, 1)
-  input_table['os_password'] = dlg:add_password(
-    type(openSub.option.os_password) == "string"
-    and openSub.option.os_password or "", 2, 2, 2, 1)
+  -- Row 2: Bazarr+ API key
+  dlg:add_label(lang["int_bazarr_api_key"]..":", 1, 2, 1, 1)
+  input_table['bazarr_api_key'] = dlg:add_password(
+    type(openSub.option.bazarr_api_key) == "string"
+    and openSub.option.bazarr_api_key or "", 2, 2, 2, 1)
 
   -- Row 3: Default primary language
   dlg:add_label(lang["int_default_lang"]..":", 1, 3, 2, 1)
@@ -1871,11 +1738,11 @@ function interface_config()
   input_table['dir_path'] = dlg:add_text_input(
     openSub.conf.dirPath, 2, 9, 2, 1)
 
-  -- Row 10: Status message (moved up from row 11)
+  -- Row 10: Status message
   input_table['message'] = nil
   input_table['message'] = dlg:add_label('', 1, 10, 4, 1)
 
-  -- Row 11: Action buttons (moved up from row 12)
+  -- Row 11: Action buttons
   dlg:add_button(
     "💾 " .. lang["int_save"],
     apply_config, 1, 11, 1, 1)
@@ -1940,13 +1807,13 @@ function interface_help()
   -- Row 15: Account & Download
   dlg:add_label("", 1, 15, 6, 1) -- Spacer
   dlg:add_label("ACCOUNT & QUOTAS:", 1, 16, 6, 1)
-  dlg:add_label("<a href='https://www.opensubtitles.com'>Free OpenSubtitles.com account required for downloads</a>", 1, 17, 6, 1)
-  dlg:add_label("Extension displays your rank, daily quota and current usage", 1, 18, 6, 1)
+  dlg:add_label("Requires a running Bazarr+ instance with the compat endpoint enabled", 1, 17, 6, 1)
+  dlg:add_label("Bazarr+ proxies through your configured subtitle providers", 1, 18, 6, 1)
   dlg:add_label("Select subtitle and click Download or Link button", 1, 19, 6, 1)
 
   -- Row 20: Links
   dlg:add_label("", 1, 20, 6, 1) -- Spacer
-  dlg:add_label("<a href='https://www.opensubtitles.com/en/support_us/'>Support OpenSubtitles</a> - thank you very much", 1, 21, 6, 1)
+  dlg:add_label("<a href='https://github.com/LavX/vlsub-bazarr-plus'>VLSub Bazarr+ on GitHub</a>", 1, 21, 6, 1)
 
   -- Row 22: Close button with icon
   dlg:add_label("", 1, 22, 6, 1) -- Spacer
@@ -2206,39 +2073,35 @@ function display_select(select_id)
   local option = openSub.option[opt]
   local default = select_conf[select_id].dflt
 
-  -- If we have a default option and no selection, show default first
+  -- VLC 3.0.23's Lua binding rejects add_value(text, 0). Shift all ids by +1:
+  -- id 1 = default/None, id k+1 = conf[k]. apply_config() reverses the shift.
   if not option and default then
-    input_table[select_id]:add_value(default, 0)
-    -- Then add all languages in original order with flags
+    input_table[select_id]:add_value(default, 1)
     for k, l in ipairs(conf) do
       local displayText = l[2] or "" -- language name
-      input_table[select_id]:add_value(displayText, k)
+      input_table[select_id]:add_value(displayText, k + 1)
     end
     return
   end
 
-  -- If we have a selected option, put it first, then others
   local selected_found = false
   for k, l in ipairs(conf) do
     if option and option == l[1] then
-      -- Put selected language first with flag
       local displayText = l[2] -- language name
-      input_table[select_id]:add_value(displayText, k)
+      input_table[select_id]:add_value(displayText, k + 1)
       selected_found = true
       break
     end
   end
 
-  -- Add default if exists and no language was selected
   if default and not selected_found then
-    input_table[select_id]:add_value(default, 0)
+    input_table[select_id]:add_value(default, 1)
   end
 
-  -- Add all other languages in original order with flags
   for k, l in ipairs(conf) do
     if not option or option ~= l[1] then
       local displayText = l[2] -- language name
-      input_table[select_id]:add_value(displayText, k)
+      input_table[select_id]:add_value(displayText, k + 1)
     end
   end
 end
@@ -2434,77 +2297,69 @@ end
 
 -- Updated buildSubtitleDisplayText function without language brackets
 function buildSubtitleDisplayText(item, langCode)
-  -- Build display text starting with language code
-  local displayText = ""
+  -- Layout: "LANG·PROV  [icons]  filename  · uploader  · N↓  · YYYY-MM-DD"
+  -- PROV is skipped when Bazarr+ didn't supply it; uploader is skipped
+  -- for generic placeholders (none / Anonymous / Unknown / empty).
 
-  -- Add language code at the beginning with spaces (e.g., "EN | ")
-  displayText = string.upper(langCode) .. " | "
+  local lang = string.upper(langCode or "??")
+  local prov = item.Provider or ""
+  local filename = item.SubFileName or "???"
 
-  -- Add filename/release name
-  displayText = displayText .. (item.SubFileName or "???")
-
-  -- REMOVED: Add language code in brackets
-  -- displayText = displayText .. " [" .. langCode .. "]"
-
-  -- Quality indicators with Unicode icons
-  local qualityIndicators = {}
-
-  -- Moviehash match (highest priority - exact match)
-  if item.MoviehashMatch then
-    table.insert(qualityIndicators, "🎯") -- Target icon for perfect match
+  -- Truncate long filenames so trailing metadata stays visible
+  local maxFilenameLen = 60
+  if string.len(filename) > maxFilenameLen then
+    filename = string.sub(filename, 1, maxFilenameLen - 1) .. "…"
   end
 
-  -- Trusted uploader
-  if item.FromTrusted then
-    table.insert(qualityIndicators, "✓") -- Checkmark for trusted
+  -- Leading lang·provider block
+  local displayText = lang
+  if prov ~= "" then
+    displayText = displayText .. "·" .. prov
   end
 
-  -- HD quality
-  if item.HD then
-    table.insert(qualityIndicators, "🎬") -- Film camera for HD
-  end
-
-  -- Hearing impaired
-  if item.HearingImpaired then
-    table.insert(qualityIndicators, "♿") -- Wheelchair for hearing impaired
-  end
-
-  -- Translation indicators (lower priority)
+  -- Quality indicators. Kept BMP-only (under U+FFFF) so VLC's Qt widget
+  -- actually renders them , emoji-plane glyphs (🎬, 🎯, 🤖) come back blank
+  -- in the default font. ✓ and ♿ survive because they're BMP.
+  local indicators = {}
+  if item.MoviehashMatch   then table.insert(indicators, "◉") end   -- hash match
+  if item.FromTrusted      then table.insert(indicators, "✓") end   -- trusted
+  if item.HD               then table.insert(indicators, "HD") end  -- HD
+  if item.HearingImpaired  then table.insert(indicators, "♿") end   -- hearing impaired
   if item.AITranslated then
-    table.insert(qualityIndicators, "🤖") -- Robot for AI translated
+    table.insert(indicators, "AI")
   elseif item.MachineTranslated then
-    table.insert(qualityIndicators, "⚙️") -- Gear for machine translated
+    table.insert(indicators, "MT")
+  end
+  if #indicators > 0 then
+    displayText = displayText .. " " .. table.concat(indicators, " ")
   end
 
-  -- Add quality indicators if any
-  if #qualityIndicators > 0 then
-    displayText = displayText .. " " .. table.concat(qualityIndicators, "")
-  end
+  -- Filename
+  displayText = displayText .. "  " .. filename
 
-  -- Only show CD count if it's not 1 CD
+  -- Multi-CD marker
   local cdCount = tonumber(item.SubSumCD) or 1
   if cdCount > 1 then
-    displayText = displayText .. " (" .. cdCount .. " CD)"
+    displayText = displayText .. " (" .. cdCount .. "CD)"
   end
 
-  -- Add uploader info with icon
+  -- Uploader (skip generic placeholders that carry no information)
   if item.UploaderName and item.UploaderName ~= "" then
-    local uploaderLower = string.lower(item.UploaderName)
-    if uploaderLower ~= "anonymous" then
-      displayText = displayText .. " 👤" .. item.UploaderName
+    local u = string.lower(item.UploaderName)
+    if u ~= "anonymous" and u ~= "none" and u ~= "unknown" then
+      displayText = displayText .. "  · " .. item.UploaderName
     end
   end
 
-  -- Add download count with downwards arrow
+  -- Download count
   local downloadCount = item.SubDownloadsCnt or "0"
-  displayText = displayText .. " [" .. downloadCount .. "↓]"
+  displayText = displayText .. "  · " .. downloadCount .. "↓"
 
-  -- Add upload date at the end
+  -- Upload date
   if item.UploadDate and item.UploadDate ~= "" then
-    -- Parse ISO date format: "2024-08-01T14:54:58Z" -> "2024-08-01"
     local dateOnly = item.UploadDate:match("(%d%d%d%d%-%d%d%-%d%d)")
     if dateOnly then
-      displayText = displayText .. " 📅" .. dateOnly
+      displayText = displayText .. "  · " .. dateOnly
     end
   end
 
@@ -2517,7 +2372,7 @@ end
 -- Check if dkjson version is compatible (can parse floats properly)
 -- dkjson 2.1-2.3 have a bug where floats cannot be parsed in certain locales
 -- This was fixed in version 2.4 (released 2013-09-28)
--- See: https://github.com/opensubtitles/vlsub-opensubtitles-com/issues/11#issuecomment-3391889129
+-- See: https://github.com/LavX/vlsub-bazarr-plus/issues/11#issuecomment-3391889129
 function check_dkjson_compatibility()
   if not json then
     vlc.msg.err("[VLSub] JSON module not loaded")
@@ -2581,7 +2436,7 @@ function show_dkjson_error_dialog()
   error_dlg:add_label("Please upgrade VLC to version 3.0.22 or newer.", 1, 10, 6, 1)
   error_dlg:add_label("", 1, 11, 6, 1)
   error_dlg:add_label("For more information, visit:", 1, 12, 6, 1)
-  error_dlg:add_label("<a href='https://github.com/opensubtitles/vlsub-opensubtitles-com/issues/11#issuecomment-3391889129'>GitHub Issue #11</a>", 1, 13, 6, 1)
+  error_dlg:add_label("<a href='https://github.com/LavX/vlsub-bazarr-plus/issues/11#issuecomment-3391889129'>GitHub Issue #11</a>", 1, 13, 6, 1)
   error_dlg:add_label("", 1, 14, 6, 1)
   error_dlg:add_button("Close", function() error_dlg:delete() end, 3, 15, 2, 1)
 end
@@ -2764,6 +2619,18 @@ function check_config()
     setError(lang["mess_err_conf_access"])
   end
 
+  -- Apply Bazarr+ Api-Key override if the user has configured one
+  apply_bazarr_api_key()
+
+  -- Stub login credentials so /login body is always non-empty.
+  -- Bazarr+ ignores the values; upstream OS.com would reject blank fields.
+  if not openSub.option.os_username or openSub.option.os_username == "" then
+    openSub.option.os_username = "bazarr-plus"
+  end
+  if not openSub.option.os_password or openSub.option.os_password == "" then
+    openSub.option.os_password = "bazarr-plus"
+  end
+
   -- Set table list of available translations from assoc. array
   -- so it is sortable
 
@@ -2860,22 +2727,24 @@ function apply_config()
       local sel_cf = select_conf[select_id]
       local opt = sel_cf.opt
 
-      if sel_val == 0 and sel_cf.dflt then
+      -- IDs were shifted by +1 in display_select (VLC rejects id=0),
+      -- so id 1 is default and id k+1 maps to conf[k].
+      if sel_val == 1 and sel_cf.dflt then
         openSub.option[opt] = nil  -- Default/None selected
-      elseif sel_val > 0 and sel_cf.cf[sel_val] then
-        -- Get the language code from the original config array
-        openSub.option[opt] = sel_cf.cf[sel_val][1]
+      elseif sel_val > 1 and sel_cf.cf[sel_val - 1] then
+        openSub.option[opt] = sel_cf.cf[sel_val - 1][1]
       end
     end
   end
 
-  -- Get username and password, trim whitespace
-  local username = trim(input_table['os_username']:get_text() or "")
-  local password = trim(input_table['os_password']:get_text() or "")
-
-  -- Set the trimmed values
-  openSub.option.os_username = username
-  openSub.option.os_password = password
+  -- Save Bazarr+ compat fields, then refresh the active Api-Key
+  if input_table['bazarr_base_url'] then
+    openSub.option.bazarr_base_url = trim(input_table['bazarr_base_url']:get_text() or "")
+  end
+  if input_table['bazarr_api_key'] then
+    openSub.option.bazarr_api_key = trim(input_table['bazarr_api_key']:get_text() or "")
+  end
+  apply_bazarr_api_key()
 
   -- Save boolean options (these should always be saved regardless of login status)
   if input_table["langExt"]:get_value() == 2 then
@@ -2958,10 +2827,10 @@ function apply_config()
 
 
   -- NOW HANDLE LOGIN VALIDATION (after config is saved)
-  -- Check if we have credentials for login test
-  if username == "" or password == "" then
-    -- No credentials provided - still show success for saved settings
-    setMessage(success_tag("Configuration saved. Please enter OpenSubtitles.com credentials for full functionality."))
+  -- Bail out if Bazarr+ isn't configured , there's nothing to log in against.
+  if not openSub.option.bazarr_base_url or openSub.option.bazarr_base_url == "" or
+     not openSub.option.bazarr_api_key  or openSub.option.bazarr_api_key  == "" then
+    setMessage(success_tag("Configuration saved. Please enter a Bazarr+ Base URL and API Key for full functionality."))
     is_authenticated = false
     return
   end
@@ -3140,7 +3009,7 @@ openSub = {
   actionLabel = "",
   lastSearchMethod = "",
   conf = {
-    url = "http://api.opensubtitles.org/xml-rpc",
+    url = "",  -- legacy XML-RPC slot, unused in the Bazarr+ REST path
     path = nil,
     HTTPVersion = "1.1",
     userAgentHTTP = app_useragent,
@@ -3158,7 +3027,7 @@ openSub = {
     -- New fields for REST API
     user_info = nil,
     token_expires = 0, -- Timestamp when token expires
-    base_url = "api.opensubtitles.com"
+    base_url = "vlsub.invalid"
   },
   file = {
     hasInput = false,
@@ -4055,11 +3924,12 @@ function searchIMBD()
   openSub.movie.episodeNumber = tonumber(
     input_table["episodeNumber"]:get_text())
 
+  -- Dropdown ids are shifted by +1 (id=1 is default/None, id=k+1 is conf[k])
   local sel = input_table["language"]:get_value()
-  if sel == 0 then
+  if sel <= 1 or not openSub.conf.languages[sel - 1] then
     openSub.movie.sublanguageid = 'all'
   else
-    openSub.movie.sublanguageid = openSub.conf.languages[sel][1]
+    openSub.movie.sublanguageid = openSub.conf.languages[sel - 1][1]
   end
 
   if openSub.movie.title ~= "" then
@@ -4648,7 +4518,8 @@ function parse_url(url)
 	return url_parsed["host"],
 		url_parsed["path"],
 		url_parsed["option"],
-		url_parsed["scheme"] or url_parsed["protocol"]
+		url_parsed["scheme"] or url_parsed["protocol"],
+		url_parsed["port"]
 end
 
 
@@ -5125,7 +4996,7 @@ openSub.searchSubtitlesByIMDB = function(imdbId)
   end
 
   -- Build the API URL with sorted parameters
-  local base_url = "http://api.opensubtitles.com/api/v1/subtitles"
+  local base_url = "http://vlsub.invalid/api/v1/subtitles"
   local params = {}
 
   -- Add IMDB ID parameter (this is the primary search filter)
@@ -5311,6 +5182,9 @@ openSub.convertNewAPIResponse = function(newData)
         MoviehashMatch = attr.moviehash_match or false,
         UploaderName = (attr.uploader and attr.uploader.name) or "Unknown",
         UploaderRank = (attr.uploader and attr.uploader.rank) or "",
+        -- Bazarr+ encodes "provider:uploader" in attr.uploader.name (e.g. "subdl:someuser").
+        -- Split it so we can render the provider next to the language.
+        Provider = "",
         HearingImpaired = attr.hearing_impaired or false,
         FPS = attr.fps or 0,
         HD = attr.hd or false
@@ -5329,8 +5203,17 @@ openSub.convertNewAPIResponse = function(newData)
 
       -- For the new API, we need to construct download URLs
       -- The download will be handled differently in the download function
-      convertedItem.ZipDownloadLink = "http://api.opensubtitles.com/api/v1/download"
+      convertedItem.ZipDownloadLink = "http://vlsub.invalid/api/v1/download"
       convertedItem.SubDownloadLink = convertedItem.ZipDownloadLink
+
+      -- Split "Provider:uploader" from Bazarr+. If no colon, treat the whole
+      -- string as the uploader and leave Provider blank (older servers, etc.).
+      local rawName = convertedItem.UploaderName or ""
+      local prov, uploader = string.match(rawName, "^([^:]+):(.*)$")
+      if prov then
+        convertedItem.Provider = prov
+        convertedItem.UploaderName = uploader
+      end
 
       table.insert(convertedData, convertedItem)
     end
@@ -5390,7 +5273,7 @@ openSub.loginWithRestAPI = function()
     vlc.msg.err("[VLSub] Login failed with status: " .. res.status)
     if res.body then
       local ok, error_data = pcall(json.decode, res.body, 1, true)
-      if ok and error_data and error_data.message then
+      if ok and type(error_data) == "table" and error_data.message then
         setError("Login failed: " .. error_data.message)
       else
         setError("Login failed with status: " .. res.status)
@@ -5533,7 +5416,7 @@ openSub.loadSessionCache = function()
   openSub.session.token = session_data.token
   openSub.session.user_info = session_data.user_info
   openSub.session.token_expires = session_data.token_expires
-  openSub.session.base_url = session_data.base_url or "api.opensubtitles.com"
+  openSub.session.base_url = session_data.base_url or "vlsub.invalid"
   openSub.session.loginTime = session_data.loginTime or os.time()
 
   return true
@@ -5547,7 +5430,7 @@ openSub.logoutRestAPI = function()
 
   openSub.actionLabel = lang["action_logout"]
 
-  local logout_url = "http://api.opensubtitles.com/api/v1/logout"
+  local logout_url = "http://vlsub.invalid/api/v1/logout"
 
   local client = Curl.new()
   client:add_header("Api-Key", config.api_key)
@@ -5777,14 +5660,10 @@ function download_subtitles_v2()
 
   -- Check if manual download is explicitly requested
   if openSub.option.downloadBehaviour == 'manual' then
-    -- For manual download, provide the web URL
-    local link = "<span style='color:#181'>"
-    link = link.."<b>"..lang["mess_dowload_link"]..":</b>"
-    link = link.."</span> &nbsp;"
-    link = link.."<a href='https://www.opensubtitles.com/subtitles/"..
-      (item.SubtitleID or item.SubHash).."'>"
-    link = link..(item.MovieReleaseName or item.SubFileName).."</a>"
-
+    -- Manual mode: no remote "subtitle page" concept under Bazarr+ since
+    -- subtitles come from many providers. Just show the filename.
+    local link = "<span style='color:#181'><b>"..lang["mess_dowload_link"]..":</b></span> &nbsp;"
+    link = link..(item.MovieReleaseName or item.SubFileName or "subtitle")
     setMessage(link)
     return false
   end
@@ -5812,9 +5691,12 @@ function getSelectedLanguages()
     vlc.msg.dbg("[VLSub] Primary language dropdown value: " .. tostring(sel1))
   end
 
+  -- Dropdown ids are shifted by +1 (id=1 is the "None"/default slot;
+  -- id=k+1 maps to conf[k]). Decode with sel - 1.
+
   -- Get primary language
-  if sel1 > 0 and openSub.conf.languages[sel1] then
-    local lang1 = openSub.conf.languages[sel1][1]
+  if sel1 > 1 and openSub.conf.languages[sel1 - 1] then
+    local lang1 = openSub.conf.languages[sel1 - 1][1]
     if openSub.option.debugLogging then
       vlc.msg.dbg("[VLSub] Primary language selected: " .. lang1)
     end
@@ -5827,8 +5709,8 @@ function getSelectedLanguages()
     if openSub.option.debugLogging then
       vlc.msg.dbg("[VLSub] Secondary language dropdown value: " .. tostring(sel2))
     end
-    if sel2 > 0 and openSub.conf.languages[sel2] then
-      local lang2 = openSub.conf.languages[sel2][1]
+    if sel2 > 1 and openSub.conf.languages[sel2 - 1] then
+      local lang2 = openSub.conf.languages[sel2 - 1][1]
       if openSub.option.debugLogging then
         vlc.msg.dbg("[VLSub] Secondary language selected: " .. lang2)
       end
@@ -5852,8 +5734,8 @@ function getSelectedLanguages()
     if openSub.option.debugLogging then
       vlc.msg.dbg("[VLSub] Third language dropdown value: " .. tostring(sel3))
     end
-    if sel3 > 0 and openSub.conf.languages[sel3] then
-      local lang3 = openSub.conf.languages[sel3][1]
+    if sel3 > 1 and openSub.conf.languages[sel3 - 1] then
+      local lang3 = openSub.conf.languages[sel3 - 1][1]
       if openSub.option.debugLogging then
         vlc.msg.dbg("[VLSub] Third language selected: " .. lang3)
       end
@@ -5892,16 +5774,17 @@ function applySubtitleSortingSelection()
   local sort_by_options = openSub.conf.sortByOptions or {}
   local sort_dir_options = openSub.conf.sortDirectionOptions or {}
 
+  -- Dropdown ids are shifted by +1 (id=1 is default, id=k+1 is option[k])
   local sort_by_value = input_table["sort_by"] and input_table["sort_by"]:get_value() or 0
-  if sort_by_value > 0 and sort_by_options[sort_by_value] then
-    openSub.option.sortBy = sort_by_options[sort_by_value][1]
+  if sort_by_value > 1 and sort_by_options[sort_by_value - 1] then
+    openSub.option.sortBy = sort_by_options[sort_by_value - 1][1]
   else
     openSub.option.sortBy = nil
   end
 
   local sort_dir_value = input_table["sort_direction"] and input_table["sort_direction"]:get_value() or 0
-  if sort_dir_value > 0 and sort_dir_options[sort_dir_value] then
-    openSub.option.sortDirection = sort_dir_options[sort_dir_value][1]
+  if sort_dir_value > 1 and sort_dir_options[sort_dir_value - 1] then
+    openSub.option.sortDirection = sort_dir_options[sort_dir_value - 1][1]
   elseif not openSub.option.sortDirection or openSub.option.sortDirection == "" then
     openSub.option.sortDirection = "desc"
   end
@@ -5924,51 +5807,39 @@ end
 
 
 -- Get user selected languages in order
+-- Dropdown ids are shifted by +1 (id=1 is default/None, id=k+1 is conf[k])
 function getUserSelectedLanguages()
   local languages = {}
 
   -- Get primary language
   local sel1 = input_table["language"]:get_value()
-  if sel1 > 0 and openSub.conf.languages[sel1] then
-    local lang1 = openSub.conf.languages[sel1][1]
-    table.insert(languages, lang1)
+  if sel1 > 1 and openSub.conf.languages[sel1 - 1] then
+    table.insert(languages, openSub.conf.languages[sel1 - 1][1])
   end
 
   -- Get secondary language
   if input_table["language2"] then
     local sel2 = input_table["language2"]:get_value()
-    if sel2 > 0 and openSub.conf.languages[sel2] then
-      local lang2 = openSub.conf.languages[sel2][1]
-      -- Avoid duplicates
+    if sel2 > 1 and openSub.conf.languages[sel2 - 1] then
+      local lang2 = openSub.conf.languages[sel2 - 1][1]
       local found = false
       for _, lang in ipairs(languages) do
-        if lang == lang2 then
-          found = true
-          break
-        end
+        if lang == lang2 then found = true; break end
       end
-      if not found then
-        table.insert(languages, lang2)
-      end
+      if not found then table.insert(languages, lang2) end
     end
   end
 
   -- Get third language
   if input_table["language3"] then
     local sel3 = input_table["language3"]:get_value()
-    if sel3 > 0 and openSub.conf.languages[sel3] then
-      local lang3 = openSub.conf.languages[sel3][1]
-      -- Avoid duplicates
+    if sel3 > 1 and openSub.conf.languages[sel3 - 1] then
+      local lang3 = openSub.conf.languages[sel3 - 1][1]
       local found = false
       for _, lang in ipairs(languages) do
-        if lang == lang3 then
-          found = true
-          break
-        end
+        if lang == lang3 then found = true; break end
       end
-      if not found then
-        table.insert(languages, lang3)
-      end
+      if not found then table.insert(languages, lang3) end
     end
   end
 
@@ -6081,7 +5952,7 @@ openSub.downloadFromNewAPI = function(item)
 
     -- Check session first
     if not openSub.checkSession() then
-        local errorMsg = "Authentication failed - please check your OpenSubtitles.com credentials"
+        local errorMsg = "Authentication failed - please check your Bazarr+ API key"
         vlc.msg.err("[VLSub] " .. errorMsg)
         setMessage(error_tag(errorMsg))
         return false
@@ -6090,8 +5961,8 @@ openSub.downloadFromNewAPI = function(item)
     vlc.msg.dbg("[VLSub] Downloading subtitle file ID: " .. item.FileID)
     setMessage(openSub.actionLabel..": "..progressBarContent(50))
 
-    -- Use the correct OpenSubtitles API endpoint with POST method
-    local download_url = "http://api.opensubtitles.com/api/v1/download"
+    -- Call the Bazarr+ compat download endpoint with POST method
+    local download_url = "http://vlsub.invalid/api/v1/download"
 
     -- Create the request body with file_id
     -- IMPORTANT: Send FileID as string to avoid scientific notation for large numbers
@@ -6302,7 +6173,7 @@ end
 -- Enhanced temporary config button with tooltip explanation
 function show_auth_error_with_config_button(errorMessage)
   -- Show error message with helpful tooltip
-  local brandedError = "<span style='color:#ff6600;' title='Authentication is required to download subtitles from OpenSubtitles.com'><b>🔐 Authentication Error:</b></span> " .. errorMessage
+  local brandedError = "<span style='color:#ff6600;' title='Authentication is required to download subtitles via Bazarr+'><b>🔐 Authentication Error:</b></span> " .. errorMessage
   setMessage(error_tag(brandedError))
 
   -- Add temporary config button
@@ -6413,7 +6284,7 @@ openSub.checkLoginAndUserInfo = function()
   -- Now get user information
   setMessage(loading_tag("Fetching account information..."))
 
-  local user_info_url = "http://api.opensubtitles.com/api/v1/infos/user"
+  local user_info_url = "http://vlsub.invalid/api/v1/infos/user"
 
   local client = Curl.new()
   client:add_header("Api-Key", config.api_key)
@@ -6633,8 +6504,9 @@ function detect_user_locale()
     table.insert(detected_locales, {source = "user_pref", locale = openSub.option.language})
   end
 
-  -- Method 6: IP-based geolocation (NEW!)
-  detect_ip_based_locale(detected_locales)
+  -- Method 6: IP-based geolocation , removed.
+  -- Leaks the user's IP to api.myip.com for a language-picker hint, and
+  -- Bazarr+ users set their languages explicitly anyway.
 
   -- Analyze and prioritize the detected locales
   local best_guess = analyze_detected_locales(detected_locales)
@@ -7416,9 +7288,9 @@ end
 
 
 
--- Map language codes to OpenSubtitles language codes (2-character codes from API)
-function map_to_opensubtitles_language(language_code)
-  -- Mapping table based on the actual OpenSubtitles API language codes
+-- Map language codes to compat-API alpha2 codes (2-character codes from API)
+function map_to_alpha2_lang(language_code)
+  -- Alpha2 codes per the compat API contract
   local language_mapping = {
     -- Direct matches (no mapping needed)
     ab = "ab", -- Abkhazian
@@ -7529,7 +7401,7 @@ function map_to_opensubtitles_language(language_code)
     pm = "pm", -- Portuguese (MZ)
     ps = "ps", -- Pushto
 
-    -- Common locale mappings to OpenSubtitles codes
+    -- Common locale mappings to alpha2 codes
     zh = "zh-cn", -- Chinese -> Chinese (simplified)
     pt = "pt-pt", -- Portuguese -> Portuguese (Portugal)
     az = "az-az", -- Azerbaijani -> Azerbaijani
@@ -7748,44 +7620,39 @@ end
 
 
 
--- 1. FIXED: test_network_connectivity function - remove ping commands for Windows
+-- Probe the configured Bazarr+ base URL, nothing else. No third-party probes.
 function test_network_connectivity()
-  update_debug_network("Testing network connectivity...")
-
-  -- REMOVED: Windows ping commands that cause popups
-  -- For Windows, use only HTTP tests with VLC's built-in networking (no external commands)
-  local test_urls = {
-    "https://www.google.com",
-    "http://api.opensubtitles.com",
-    "https://httpbin.org/get"
-  }
-
-  for i, url in ipairs(test_urls) do
-    update_debug_network("Testing connection " .. i .. "/" .. #test_urls .. "...")
-    append_debug_log("Testing: " .. url)
-
-    local test_client = Curl.new() -- This uses VLC's networking, not curl
-    test_client:set_aggressive_timeouts()
-    test_client:set_timeout(3)
-    test_client:set_retries(0)
-
-    local start_time = os.clock()
-    local res = test_client:get(url)
-    local end_time = os.clock()
-    local elapsed_ms = math.floor((end_time - start_time) * 1000)
-
-    if res and res.status and res.status >= 200 and res.status < 400 then
-      update_debug_network("Connection OK (responded in " .. elapsed_ms .. "ms)")
-      append_debug_log("Network test passed: " .. url .. " (" .. elapsed_ms .. "ms)")
-      return true
-    else
-      append_debug_log("Network test failed: " .. url .. " (" .. elapsed_ms .. "ms)")
-    end
+  local base = openSub.option and openSub.option.bazarr_base_url
+  if not base or base == "" then
+    update_debug_network("Skipped (Bazarr+ not configured)")
+    append_debug_log("Network test skipped , set Bazarr+ Base URL in Config")
+    networkTestsFailed = false
+    return true
   end
 
-  update_debug_network("⚠️  OFFLINE MODE - LIMITED FUNCTIONALITY")
-  append_debug_log("⚠️  WARNING: No internet connection detected!")
-  append_debug_log("Extension uses VLC's built-in networking (no external tools required)")
+  local test_url = string.gsub(base, "/+$", "") .. "/infos/languages"
+  update_debug_network("Testing Bazarr+ connectivity...")
+  append_debug_log("Testing: " .. test_url)
+
+  local test_client = Curl.new()
+  test_client:set_aggressive_timeouts()
+  test_client:set_timeout(3)
+  test_client:set_retries(0)
+
+  local start_time = os.clock()
+  local res = test_client:get(test_url)
+  local elapsed_ms = math.floor((os.clock() - start_time) * 1000)
+
+  -- Any non-5xx means we reached Bazarr+. 401 is "host alive, key wrong" , still reachable.
+  if res and res.status and res.status >= 200 and res.status < 500 then
+    update_debug_network("Bazarr+ reachable (" .. res.status .. ", " .. elapsed_ms .. "ms)")
+    append_debug_log("Network test passed: " .. test_url .. " (" .. res.status .. ", " .. elapsed_ms .. "ms)")
+    networkTestsFailed = false
+    return true
+  end
+
+  update_debug_network("⚠️ Bazarr+ unreachable")
+  append_debug_log("⚠️ WARNING: could not reach " .. test_url)
   networkTestsFailed = true
   return false
 end
@@ -7877,7 +7744,7 @@ end
 -- 2. Dual-mode operation: HTTPS uses vlc.stream, HTTP uses vlc.net.connect_tcp
 --    - bettervlsub: Always uses vlc.net.connect_tcp (with optional SSL fallback)
 --    - This version: Chooses best method based on protocol
--- 3. URL parameter sorting for OpenSubtitles.com API compatibility
+-- 3. URL parameter sorting for compat-API compatibility
 --    - bettervlsub: No parameter sorting
 --    - This version: Alphabetically sorts URL params (API requirement)
 -- 4. Custom chunked transfer encoding decoder
@@ -7917,8 +7784,8 @@ VLCHttpClient.__index = VLCHttpClient
 function VLCHttpClient.new()
     local self = setmetatable({}, VLCHttpClient)
     self.headers = {}
-    self.timeout = 30
-    self.retries = 2
+    self.timeout = 5
+    self.retries = 0
     return self
 end
 
@@ -7928,25 +7795,30 @@ function VLCHttpClient:add_header(key, value)
 end
 
 function VLCHttpClient:set_timeout(seconds)
-    self.timeout = tonumber(seconds) or 30
+    -- Hard cap at 30s. Auth calls use set_aggressive_timeouts() → 5s. Search
+    -- asks for 30s explicitly because Bazarr+ fan-out can legitimately take that long.
+    local requested = tonumber(seconds) or 5
+    self.timeout = math.min(requested, 30)
     return self
 end
 
 function VLCHttpClient:set_retries(count)
-    self.retries = tonumber(count) or 2
+    -- Hard cap at 0 retries. A hung attempt should fail, not retry.
+    local requested = tonumber(count) or 0
+    self.retries = math.min(requested, 0)
     return self
 end
 
 function VLCHttpClient:set_aggressive_timeouts()
-    self.timeout = 15
-    self.retries = 1
+    self.timeout = 5
+    self.retries = 0
     return self
 end
 
 
 
 
--- Fix for OpenSubtitles.com API URL parameter sorting requirement
+-- Fix for compat-API URL parameter sorting requirement
 -- The API returns 301 redirects if parameters are not sorted alphabetically
 
 -- Enhanced URL building function with parameter sorting
@@ -8043,7 +7915,7 @@ openSub.searchSubtitlesNewAPI = function()
   end
 
   -- Build the API URL with sorted parameters
-  local base_url = "http://api.opensubtitles.com/api/v1/subtitles"
+  local base_url = "http://vlsub.invalid/api/v1/subtitles"
   local params = {}
 
   -- Add query parameter (movie title)
@@ -8168,7 +8040,7 @@ openSub.searchSubtitlesByHashNewAPI = function()
     end
 
     -- Build the API URL with sorted parameters
-    local base_url = "http://api.opensubtitles.com/api/v1/subtitles"
+    local base_url = "http://vlsub.invalid/api/v1/subtitles"
     local params = {}
 
     -- Add moviehash parameter (required for hash search)
@@ -8400,7 +8272,7 @@ function url_decode(str)
 end
 
 
--- Custom URL encode function (OpenSubtitles.com compatible - uses + for spaces)
+-- Custom URL encode function (compat-API friendly - uses + for spaces)
 function url_encode(str)
     if not str then return "" end
     -- First handle newlines
@@ -8408,7 +8280,7 @@ function url_encode(str)
     -- Encode special characters but NOT spaces yet
     str = string.gsub(str, "([^%w %-%_%.%~])",
         function(c) return string.format("%%%02X", string.byte(c)) end)
-    -- Convert spaces to + (OpenSubtitles.com preferred format)
+    -- Convert spaces to + (compat-API preferred format)
     str = string.gsub(str, " ", "+")
     return str
 end
@@ -8646,8 +8518,9 @@ end
 
 -- Use vlc.net.connect_tcp for HTTP requests
 function VLCHttpClient:_make_request_tcp(method, url, data)
-    local host, path, option, protocol = parse_url(url)
-    local port = (protocol == "https") and 443 or 80
+    local host, path, option, protocol, url_port = parse_url(url)
+    local port = (url_port and url_port ~= "" and tonumber(url_port))
+                 or ((protocol == "https") and 443 or 80)
     if not protocol or not host then
         vlc.msg.err("[VLSub] Invalid URL: " .. url)
         return nil
@@ -8676,7 +8549,11 @@ function VLCHttpClient:_make_request_tcp(method, url, data)
     -- Build HTTP request
     local request_lines = {}
     table.insert(request_lines, method .. " " .. full_path .. " HTTP/1.1")
-    table.insert(request_lines, "Host: " .. host)
+    local host_header = host
+    if port ~= 80 and port ~= 443 then
+        host_header = host .. ":" .. port
+    end
+    table.insert(request_lines, "Host: " .. host_header)
     table.insert(request_lines, "User-Agent: " .. app_useragent)
     table.insert(request_lines, "Accept: */*")
     table.insert(request_lines, "Connection: close")
@@ -8752,9 +8629,9 @@ function VLCHttpClient:_make_request_tcp(method, url, data)
             local empty_recv_count = 0  -- Track consecutive empty recvs
 
             while chunks_read < max_chunks do
-                -- Check timeout (max 15 seconds)
-                if os.time() - start_time > math.min(self.timeout, 15) then
-                    vlc.msg.err("[VLSub] Request timeout after " .. math.min(self.timeout, 15) .. " seconds")
+                -- Check timeout (honors self.timeout, no artificial 15s cap)
+                if os.time() - start_time > self.timeout then
+                    vlc.msg.err("[VLSub] Request timeout after " .. self.timeout .. " seconds")
                     break
                 end
 
@@ -8934,6 +8811,9 @@ end
 
 -- Main request method - chooses implementation based on protocol
 function VLCHttpClient:_make_request(method, url, data)
+    -- Redirect placeholder upstream URLs to Bazarr+ compat endpoint if configured
+    url = bazarr_rewrite_url(url)
+
     -- Log the full URL for complete visibility
     vlc.msg.warn("[VLSub] " .. method .. " " .. url)
 
