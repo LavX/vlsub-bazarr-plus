@@ -2,7 +2,7 @@
 set -e
 
 echo "================================================"
-echo "VLSub OpenSubtitles.com Extension Installer"
+echo "VLSub Bazarr+ Installer"
 echo "================================================"
 echo
 
@@ -12,6 +12,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
+
+# Download source: raw file on the fork's default branch.
+# Works before any GitHub release is published.
+RAW_SOURCE_URL="${VLSUB_BAZARR_PLUS_URL:-https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/vlsubcom.lua}"
+
+# Paths to install into, populated by detect_platform / detect_linux_targets.
+# Format: "label|absolute_path"
+TARGETS=()
 
 # Check if curl is available
 if ! command -v curl &> /dev/null; then
@@ -26,21 +34,52 @@ if ! command -v curl &> /dev/null; then
     exit 1
 fi
 
-# Detect platform and set installation directory
+# Detect each VLC flavor installed on Linux and queue the matching extensions dir.
+# Covers native packages, Flatpak (org.videolan.VLC), and Snap (vlc).
+detect_linux_targets() {
+    local found_any=0
+
+    if command -v vlc &> /dev/null; then
+        TARGETS+=("Native (vlc on PATH)|$HOME/.local/share/vlc/lua/extensions")
+        found_any=1
+    fi
+
+    if command -v flatpak &> /dev/null \
+       && flatpak list --app --columns=application 2>/dev/null \
+          | grep -qix "org.videolan.VLC"; then
+        TARGETS+=("Flatpak (org.videolan.VLC)|$HOME/.var/app/org.videolan.VLC/data/vlc/lua/extensions")
+        found_any=1
+    fi
+
+    if command -v snap &> /dev/null \
+       && snap list 2>/dev/null | awk 'NR>1 {print $1}' | grep -qx "vlc"; then
+        TARGETS+=("Snap (vlc)|$HOME/snap/vlc/current/.local/share/vlc/lua/extensions")
+        found_any=1
+    fi
+
+    if [ "$found_any" -eq 0 ]; then
+        printf "${YELLOW}⚠ No VLC install detected (vlc/flatpak/snap all absent).${NC}\n"
+        echo "Falling back to the standard per-user dir; VLC will pick it up if you"
+        echo "install it later via your distro's package manager."
+        TARGETS+=("Native (fallback)|$HOME/.local/share/vlc/lua/extensions")
+    fi
+}
+
+# Detect platform and set installation target(s).
 detect_platform() {
     case "$OSTYPE" in
         darwin*)
             PLATFORM="macOS"
-            VLC_EXT_DIR="$HOME/Library/Application Support/org.videolan.vlc/lua/extensions"
+            TARGETS+=("macOS|$HOME/Library/Application Support/org.videolan.vlc/lua/extensions")
             ;;
         linux-gnu*|linux-musl*)
             PLATFORM="Linux"
-            VLC_EXT_DIR="$HOME/.local/share/vlc/lua/extensions"
+            detect_linux_targets
             ;;
         msys|cygwin|win*)
             PLATFORM="Windows"
             if [ -n "$APPDATA" ]; then
-                VLC_EXT_DIR="$APPDATA/vlc/lua/extensions"
+                TARGETS+=("Windows|$APPDATA/vlc/lua/extensions")
             else
                 printf "${RED}Error: Cannot detect VLC extensions directory on Windows.${NC}\n"
                 echo "Please install manually by copying vlsubcom.lua to:"
@@ -53,18 +92,30 @@ detect_platform() {
             echo "Supported platforms: macOS, Linux, Windows (Git Bash/WSL)"
             echo ""
             echo "For manual installation, copy vlsubcom.lua to your VLC extensions directory:"
-            echo "  Windows: %APPDATA%\\vlc\\lua\\extensions\\"
-            echo "  macOS: ~/Library/Application Support/org.videolan.vlc/lua/extensions/"
-            echo "  Linux: ~/.local/share/vlc/lua/extensions/"
+            echo "  Windows:       %APPDATA%\\vlc\\lua\\extensions\\"
+            echo "  macOS:         ~/Library/Application Support/org.videolan.vlc/lua/extensions/"
+            echo "  Linux native:  ~/.local/share/vlc/lua/extensions/"
+            echo "  Linux flatpak: ~/.var/app/org.videolan.VLC/data/vlc/lua/extensions/"
+            echo "  Linux snap:    ~/snap/vlc/current/.local/share/vlc/lua/extensions/"
             exit 1
             ;;
     esac
 }
 
-# Check if VLC is installed
+# Summarize detected targets before doing anything destructive.
+print_targets() {
+    printf "${BLUE}VLC install target(s):${NC}\n"
+    local t
+    for t in "${TARGETS[@]}"; do
+        local label="${t%%|*}"
+        local path="${t#*|}"
+        printf "  • %s\n    %s\n" "$label" "$path"
+    done
+}
+
+# Check if VLC is reachable for the given platform (informational).
 check_vlc() {
     echo "Checking for VLC installation..."
-    
     case "$PLATFORM" in
         "macOS")
             if [ -d "/Applications/VLC.app" ] || command -v vlc &> /dev/null; then
@@ -72,7 +123,7 @@ check_vlc() {
             else
                 printf "${YELLOW}⚠ VLC not found.${NC}\n"
                 echo "Download VLC: https://www.videolan.org/vlc/download-macosx.html"
-                read -p "Continue installation anyway? (y/N): " -n 1 -r
+                read -p "Continue installation anyway? (y/N): " -n 1 -r < /dev/tty || REPLY=""
                 echo
                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                     exit 1
@@ -80,21 +131,8 @@ check_vlc() {
             fi
             ;;
         "Linux")
-            if command -v vlc &> /dev/null; then
-                printf "${GREEN}✓ VLC found${NC}\n"
-            else
-                printf "${YELLOW}⚠ VLC not found.${NC}\n"
-                echo "Install VLC:"
-                echo "  Ubuntu/Debian: sudo apt install vlc"
-                echo "  Fedora: sudo dnf install vlc"
-                echo "  Arch: sudo pacman -S vlc"
-                echo "  Or download from: https://www.videolan.org/"
-                read -p "Continue installation anyway? (y/N): " -n 1 -r
-                echo
-                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                    exit 1
-                fi
-            fi
+            # detect_linux_targets already printed a warning if nothing was found.
+            printf "${GREEN}✓ Proceeding with %d target(s)${NC}\n" "${#TARGETS[@]}"
             ;;
         "Windows")
             echo "Please ensure VLC is installed from https://www.videolan.org/"
@@ -102,61 +140,54 @@ check_vlc() {
     esac
 }
 
-# Create installation directory
-create_directory() {
-    echo "Creating extension directory..."
-    printf "${BLUE}Directory: $VLC_EXT_DIR${NC}\n"
-    
-    if [ ! -d "$VLC_EXT_DIR" ]; then
-        mkdir -p "$VLC_EXT_DIR"
-        printf "${GREEN}✓ Directory created${NC}\n"
-    else
-        printf "${GREEN}✓ Directory exists${NC}\n"
-    fi
-}
+# Download the extension once into a temp file, then fan it out to all targets.
+download_to_temp() {
+    TEMP_FILE="$(mktemp)"
+    echo "Downloading VLSub Bazarr+..."
+    printf "${BLUE}From: $RAW_SOURCE_URL${NC}\n"
 
-# Backup existing installation
-backup_existing() {
-    local existing_file="$VLC_EXT_DIR/vlsubcom.lua"
-    
-    if [ -f "$existing_file" ]; then
-        echo "Found existing VLSub installation..."
-        local backup_file="$existing_file.backup.$(date +%Y%m%d_%H%M%S)"
-        cp "$existing_file" "$backup_file"
-        printf "${GREEN}✓ Backup created: $(basename "$backup_file")${NC}\n"
-    fi
-}
-
-# Download and install the extension
-install_extension() {
-    local temp_file=$(mktemp)
-    local download_url="https://github.com/opensubtitles/vlsub-opensubtitles-com/releases/latest/download/vlsubcom.lua"
-    
-    echo "Downloading VLSub extension..."
-    printf "${BLUE}From: $download_url${NC}\n"
-    
-    if curl -L -f -o "$temp_file" "$download_url" --progress-bar; then
+    if curl -L -f -o "$TEMP_FILE" "$RAW_SOURCE_URL" --progress-bar; then
         printf "${GREEN}✓ Download successful${NC}\n"
     else
         printf "${RED}✗ Download failed${NC}\n"
         echo "Please check your internet connection and try again."
-        echo "Or download manually from: https://github.com/opensubtitles/vlsub-opensubtitles-com/releases"
-        rm -f "$temp_file"
+        echo "Or download manually from: https://github.com/LavX/vlsub-bazarr-plus"
+        rm -f "$TEMP_FILE"
         exit 1
     fi
-    
-    echo "Installing extension..."
-    mv "$temp_file" "$VLC_EXT_DIR/vlsubcom.lua"
-    printf "${GREEN}✓ Installation complete${NC}\n"
-    printf "${BLUE}📍 Installed to: $VLC_EXT_DIR/vlsubcom.lua${NC}\n"
 }
 
-# Set permissions (Linux/macOS)
-set_permissions() {
-    if [ "$PLATFORM" != "Windows" ]; then
-        chmod 644 "$VLC_EXT_DIR/vlsubcom.lua"
-        printf "${GREEN}✓ Permissions set${NC}\n"
-    fi
+# Install the downloaded temp file into every target dir, with per-target backup.
+install_to_targets() {
+    local t
+    for t in "${TARGETS[@]}"; do
+        local label="${t%%|*}"
+        local dir="${t#*|}"
+        local dest="$dir/vlsubcom.lua"
+
+        echo
+        printf "${BLUE}→ %s${NC}\n" "$label"
+        printf "  dir: %s\n" "$dir"
+
+        if [ ! -d "$dir" ]; then
+            mkdir -p "$dir"
+            printf "  ${GREEN}✓ Directory created${NC}\n"
+        fi
+
+        if [ -f "$dest" ]; then
+            local backup="$dest.backup.$(date +%Y%m%d_%H%M%S)"
+            cp "$dest" "$backup"
+            printf "  ${GREEN}✓ Backup: %s${NC}\n" "$(basename "$backup")"
+        fi
+
+        cp "$TEMP_FILE" "$dest"
+        if [ "$PLATFORM" != "Windows" ]; then
+            chmod 644 "$dest"
+        fi
+        printf "  ${GREEN}✓ Installed${NC}\n"
+    done
+
+    rm -f "$TEMP_FILE"
 }
 
 # Show completion message
@@ -166,26 +197,28 @@ show_completion() {
     printf "${GREEN}🎉 Installation Complete!${NC}\n"
     echo "================================================"
     echo
-    printf "${BLUE}📁 Extension installed to:${NC}\n"
-    printf "${YELLOW}   $VLC_EXT_DIR/vlsubcom.lua${NC}\n"
+    printf "${BLUE}📁 Installed to:${NC}\n"
+    local t
+    for t in "${TARGETS[@]}"; do
+        local label="${t%%|*}"
+        local dir="${t#*|}"
+        printf "  ${YELLOW}%s${NC}\n    %s/vlsubcom.lua\n" "$label" "$dir"
+    done
     echo
     printf "${YELLOW}Next steps:${NC}\n"
     printf "1. ${BLUE}Restart VLC Media Player${NC}\n"
-    printf "2. ${BLUE}Go to View → VLSub OpenSubtitles.com${NC}\n"
-    printf "3. ${BLUE}Enter your OpenSubtitles.com credentials${NC}\n"
-    printf "   ${GREEN}(Create free account at https://www.opensubtitles.com/)${NC}\n"
-    echo
-    printf "${YELLOW}Quick start:${NC}\n"
-    printf "• ${BLUE}Hash search:${NC} For exact subtitle matches\n"
-    printf "• ${BLUE}Name search:${NC} For flexible title-based search\n"
-    printf "• ${BLUE}Double-click subtitle${NC} to download and load\n"
+    printf "   • Native:  run ${YELLOW}vlc${NC}\n"
+    printf "   • Flatpak: run ${YELLOW}flatpak run org.videolan.VLC${NC}\n"
+    printf "   • Snap:    run ${YELLOW}snap run vlc${NC}\n"
+    printf "2. ${BLUE}Go to View → VLSub Bazarr+${NC}\n"
+    printf "3. ${BLUE}Open Config and set Bazarr+ Base URL + API Key${NC}\n"
+    printf "   ${GREEN}(Base URL example: http://your-bazarr-host:6767)${NC}\n"
     echo
     printf "${YELLOW}Support & Documentation:${NC}\n"
-    printf "• ${BLUE}Issues:${NC} https://github.com/opensubtitles/vlsub-opensubtitles-com/issues\n"
-    printf "• ${BLUE}Docs:${NC} https://github.com/opensubtitles/vlsub-opensubtitles-com\n"
-    printf "• ${BLUE}OpenSubtitles:${NC} https://www.opensubtitles.com/\n"
+    printf "• ${BLUE}Issues:${NC} https://github.com/LavX/vlsub-bazarr-plus/issues\n"
+    printf "• ${BLUE}Repo:${NC}   https://github.com/LavX/vlsub-bazarr-plus\n"
     echo
-    printf "${BLUE}💡 To uninstall:${NC} Delete the file at the path shown above\n"
+    printf "${BLUE}💡 To uninstall:${NC} delete vlsubcom.lua from any path above\n"
     echo
 }
 
@@ -195,24 +228,17 @@ main() {
     detect_platform
     printf "${GREEN}Platform: $PLATFORM${NC}\n"
     echo
-    
+
+    print_targets
+    echo
+
     check_vlc
     echo
-    
-    create_directory
-    echo
-    
-    backup_existing
-    echo
-    
-    install_extension
-    echo
-    
-    set_permissions
-    echo
-    
+
+    download_to_temp
+    install_to_targets
+
     show_completion
 }
 
-# Run installation
 main "$@"

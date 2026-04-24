@@ -1,4 +1,4 @@
-# VLSub OpenSubtitles.com Extension Installer for Windows
+# VLSub Bazarr+ Installer for Windows
 param(
     [switch]$Force
 )
@@ -8,9 +8,15 @@ $Host.UI.RawUI.ForegroundColor = "White"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "VLSub OpenSubtitles.com Extension Installer" -ForegroundColor Cyan
+Write-Host "VLSub Bazarr+ Installer" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Source URL: raw file on the fork's default branch.
+# Works before any GitHub release is published. Override with $env:VLSUB_BAZARR_PLUS_URL.
+$downloadUrl = if ($env:VLSUB_BAZARR_PLUS_URL) { $env:VLSUB_BAZARR_PLUS_URL } else {
+    "https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/vlsubcom.lua"
+}
 
 # Check PowerShell version
 if ($PSVersionTable.PSVersion.Major -lt 3) {
@@ -95,26 +101,25 @@ if (Test-Path $existingFile) {
 }
 
 # Download the extension
-$downloadUrl = "https://github.com/opensubtitles/vlsub-opensubtitles-com/releases/latest/download/vlsubcom.lua"
 $destinationFile = "$vlcExtDir\vlsubcom.lua"
 
-Write-Host "Downloading VLSub extension..." -ForegroundColor Blue
+Write-Host "Downloading VLSub Bazarr+..." -ForegroundColor Blue
 Write-Host "From: $downloadUrl" -ForegroundColor Cyan
 
 try {
     # Use TLS 1.2 for better compatibility
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
+
     $progressPreference = 'Continue'
     Invoke-WebRequest -Uri $downloadUrl -OutFile $destinationFile -UseBasicParsing
-    
+
     Write-Host "[OK] Download successful" -ForegroundColor Green
     Write-Host "[OK] Installation complete" -ForegroundColor Green
     Write-Host "Installed to: $destinationFile" -ForegroundColor Blue
 } catch {
     Write-Host "[ERROR] Download failed: $_" -ForegroundColor Red
     Write-Host "Please check your internet connection and try again." -ForegroundColor Red
-    Write-Host "Or download manually from: https://github.com/opensubtitles/vlsub-opensubtitles-com/releases" -ForegroundColor Cyan
+    Write-Host "Or download manually from: https://github.com/LavX/vlsub-bazarr-plus" -ForegroundColor Cyan
     Read-Host "Press Enter to exit"
     exit 1
 }
@@ -136,19 +141,13 @@ Write-Host "   $destinationFile" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "NEXT STEPS:" -ForegroundColor Yellow
 Write-Host "1. Restart VLC Media Player" -ForegroundColor White
-Write-Host "2. Go to View -> VLSub OpenSubtitles.com" -ForegroundColor White
-Write-Host "3. Enter your OpenSubtitles.com credentials" -ForegroundColor White
-Write-Host "   (Create free account at https://www.opensubtitles.com/)" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "QUICK START:" -ForegroundColor Yellow
-Write-Host "* Hash search: For exact subtitle matches" -ForegroundColor White
-Write-Host "* Name search: For flexible title-based search" -ForegroundColor White
-Write-Host "* Double-click subtitle to download and load" -ForegroundColor White
+Write-Host "2. Go to View -> VLSub Bazarr+" -ForegroundColor White
+Write-Host "3. Open Config and set Bazarr+ Base URL + API Key" -ForegroundColor White
+Write-Host "   (Base URL example: http://your-bazarr-host:6767)" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "SUPPORT & DOCUMENTATION:" -ForegroundColor Yellow
-Write-Host "* Issues: https://github.com/opensubtitles/vlsub-opensubtitles-com/issues" -ForegroundColor Cyan
-Write-Host "* Docs: https://github.com/opensubtitles/vlsub-opensubtitles-com" -ForegroundColor Cyan
-Write-Host "* OpenSubtitles: https://www.opensubtitles.com/" -ForegroundColor Cyan
+Write-Host "* Issues: https://github.com/LavX/vlsub-bazarr-plus/issues" -ForegroundColor Cyan
+Write-Host "* Repo:   https://github.com/LavX/vlsub-bazarr-plus" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "To uninstall: Delete the file at the path shown above" -ForegroundColor Blue
 Write-Host ""
