@@ -1,226 +1,103 @@
-# VLSub for OpenSubtitles.com
+# VLSub Bazarr+
 
-A modern VLC extension for downloading subtitles from **OpenSubtitles.com** using their latest REST API.
+A VLC extension that searches and downloads subtitles via a self-hosted [Bazarr+](https://github.com/LavX/bazarr) instance. Configure your subtitle providers once in Bazarr+, use them from every VLC on your LAN.
 
-[![GitHub release](https://img.shields.io/github/v/release/opensubtitles/vlsub-opensubtitles-com)](https://github.com/opensubtitles/vlsub-opensubtitles-com/releases)
-[![GitHub downloads](https://img.shields.io/github/downloads/opensubtitles/vlsub-opensubtitles-com/total)](https://github.com/opensubtitles/vlsub-opensubtitles-com/releases)
-[![VLC version](https://img.shields.io/badge/VLC-3.0+-orange.svg)](https://www.videolan.org/vlc/)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://github.com/opensubtitles/vlsub-opensubtitles-com#installation)
-[![GitHub stars](https://img.shields.io/github/stars/opensubtitles/vlsub-opensubtitles-com)](https://github.com/opensubtitles/vlsub-opensubtitles-com/stargazers)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/opensubtitles/vlsub-opensubtitles-com/graphs/commit-activity)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+Hard fork for the Bazarr+ compat endpoint. Not tracking upstream.
 
-> **Note**: This extension is specifically for **OpenSubtitles.com** (not .org) and uses their modern REST API with enhanced features and better performance.
+## Prerequisites
 
-## ✨ Features
+- VLC 3.0 or newer (native, Flatpak `org.videolan.VLC`, or Snap `vlc`).
+- A running Bazarr+ instance with the **External Integration** endpoint enabled
+  (Settings → External Integration → toggle on, copy the API token, restart Bazarr+).
 
-- 🔍 **Smart Search**: Hash-based search for exact matches + name-based search with GuessIt integration
-- 🌐 **Multi-language Support**: Select up to 3 preferred subtitle languages with intelligent prioritization
-- 🎯 **Auto-detection**: Automatic locale detection from system settings, timezone, and IP geolocation
-- 📱 **Modern API**: Uses OpenSubtitles.com REST API v1 for better performance and reliability
-- 🔄 **Auto-updates**: Built-in update mechanism keeps the extension current
-- 🎬 **Smart Metadata**: GuessIt API integration for accurate movie/TV show detection
-- 🏆 **Quality Indicators**: Shows trusted uploaders, download counts, sync quality, and ratings
-- 💾 **Flexible Download**: Auto-load subtitles or save manually with language codes
-- 🌍 **Country-specific Languages**: Intelligent language suggestions based on your location
+## Install
 
-## 🆚 Differences from Legacy vlsub (.org version)
+### One-liner (Linux, macOS)
 
-| Feature | Legacy vlsub (.org) | VLSub OpenSubtitles.com |
-|---------|---------------------|-------------------------|
-| **API** | XML-RPC (legacy) | REST API v1 (modern) |
-| **Authentication** | Optional | Required (free account) |
-| **Language Selection** | Single language | Up to 3 languages with priority |
-| **Search Methods** | Basic hash/name | Hash + Name + GuessIt fallback |
-| **Auto-updates** | None | Built-in update system |
-| **Locale Detection** | Simple | Advanced system detection |
-| **Quality Indicators** | Basic | Detailed (trusted, HD, sync, etc.) |
-| **Performance** | Slower XML parsing | Fast JSON API |
-| **Metadata** | Manual input | Smart GuessIt extraction |
-
-## 🚀 Installation
-
-### Method 1: One-line Installation (Recommended)
-
-**macOS/Linux:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.sh | bash
 ```
 
+The script detects native, Flatpak, and Snap VLC installs and copies `vlsubcom.lua` into every extensions dir it finds.
 
-**Windows (PowerShell):**
-*Press `Windows + R` → type `powershell` → Enter, then run:*
+### One-liner (Windows, PowerShell)
+
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser; iwr -useb https://raw.githubusercontent.com/opensubtitles/vlsub-opensubtitles-com/main/scripts/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/LavX/vlsub-bazarr-plus/main/scripts/install.ps1 | iex
 ```
 
-### Method 2: Arch User Repository (Arch Linux)
+### Manual
 
-**With paru:**
+Copy `vlsubcom.lua` to your VLC extensions dir:
+
+| Install type | Path |
+|---|---|
+| Linux native | `~/.local/share/vlc/lua/extensions/` |
+| Linux Flatpak | `~/.var/app/org.videolan.VLC/data/vlc/lua/extensions/` |
+| Linux Snap | `~/snap/vlc/current/.local/share/vlc/lua/extensions/` |
+| macOS | `~/Library/Application Support/org.videolan.vlc/lua/extensions/` |
+| Windows | `%APPDATA%\vlc\lua\extensions\` |
+
+Restart VLC.
+
+## Configure
+
+1. In VLC: **View → VLSub Bazarr+**.
+2. Click **⚙️ Config**.
+3. Fill in:
+   - **Bazarr+ Base URL**: `http://<bazarr-host>:6767`
+   - **Bazarr+ API Key**: the token from Bazarr+ Settings → External Integration.
+4. Click **💾 Save**.
+
+If the credentials are valid you get `Login successful` and quota info. The session is cached on disk so subsequent launches don't re-authenticate.
+
+## Use
+
+- **View → VLSub Bazarr+** while a video is playing for hash-based search, or without a video for title-based search.
+- Fill in **Title / Season / Episode** if auto-detection is wrong.
+- Pick up to **3 subtitle languages**.
+- Double-click a row or use **Download**. The subtitle is saved next to the video file and loaded into the current playback.
+
+Each result row: `LANG·provider  [indicators]  filename  · uploader  · downloads↓  · date`.
+
+Indicators:
+
+| Mark | Meaning |
+|---|---|
+| `◉` | hash match (exact) |
+| `✓` | trusted uploader |
+| `HD` | HD release |
+| `♿` | hearing-impaired |
+| `AI` | AI-translated |
+| `MT` | machine-translated |
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| **VLSub Bazarr+ missing from View menu** | VLC only scans extensions at launch. Fully quit VLC (`pkill -f vlc.bin` for Flatpak) and relaunch. |
+| **Config dialog freezes after Save** | Wrong URL or port. Worst-case freeze is 5 s. Check **Tools → Messages** (verbosity 2) for the `[VLSub] POST …` line, fix the URL, Save again. |
+| **Login failed (401)** | API token doesn't match. Regenerate in Bazarr+ Settings → External Integration and re-paste. |
+| **Login failed (405 / 404)** | Base URL is wrong, or Bazarr+ compat endpoint isn't enabled. Base URL is just the host and port, e.g. `http://host:6767`, no path suffix. |
+| **No results** | Bazarr+ returned empty. Check Bazarr+ logs; providers may have errored or timed out. 503 with `x-reason: upstream` means all configured providers failed. |
+| **Results look stale** | Bazarr+ caches search results server-side. Adjust `cache_ttl_seconds` in Bazarr+ `External Integration` settings. |
+| **Download link 404** | `file_id` expired (60 min default TTL). Re-search. |
+
+To capture a live debug log:
+
 ```bash
-paru -S vlsub-opensubtitles-com-git
+# Linux Flatpak
+flatpak run org.videolan.VLC --verbose=2 --file-logging \
+  --logfile=$HOME/.var/app/org.videolan.VLC/data/vlc.log
 ```
 
-**With yay:**
-```bash
-yay -S vlsub-opensubtitles-com-git
-```
+Then grep `\[VLSub\]` in the logfile.
 
-### Method 3: Manual Installation
+## Related
 
-1. **Download** the latest `vlsubcom.lua` from [Releases](https://github.com/opensubtitles/vlsub-opensubtitles-com/releases)
-2. **Copy** to your VLC extensions directory:
-   - **Windows**: `%APPDATA%\vlc\lua\extensions\`
-   - **macOS**: `~/Library/Application Support/org.videolan.vlc/lua/extensions/`
-   - **Linux**: `~/.local/share/vlc/lua/extensions/`
-3. **Restart** VLC Media Player
-4. **Access** via `View → VLSub OpenSubtitles.com`
+- [Bazarr+](https://github.com/LavX/bazarr): the server this plugin talks to.
+- [jellyfin-plugin-bazarr-plus](https://github.com/LavX/jellyfin-plugin-bazarr-plus): same compat endpoint, Jellyfin-side consumer.
 
-## 📋 Requirements
+## License
 
-- **VLC Media Player** 3.0 or newer
-- **OpenSubtitles.com account** ([free registration](https://www.opensubtitles.com/newuser))
-- **Internet connection** for searching and downloading
-- **curl** command-line tool (for downloads - usually pre-installed)
-
-## 🎬 Usage
-
-### Quick Start
-1. **Setup**: Open VLC → View → VLSub OpenSubtitles.com → Config
-2. **Login**: Enter your OpenSubtitles.com username and password
-3. **Play**: Start your video file
-4. **Search**: Click "🎯 Search by Hash" for exact matches or "🔍 Search by Name"
-5. **Download**: Click download and load automatically
-
-### Search Methods
-
-#### 🎯 Hash Search (Recommended)
-- **Best for**: Local video files
-- **Accuracy**: Finds exactly synchronized subtitles
-- **How it works**: Calculates unique file fingerprint for perfect matching, failback to Name Search
-
-#### 🔍 Name Search
-- **Best for**: Streaming content, renamed files, or when hash fails
-- **Features**: Uses GuessIt to extract title, year, season, episode from filename
-- **Flexibility**: Works with various naming conventions
-
-### Language Selection
-- **Primary Language**: Your main subtitle preference
-- **Secondary + Third**: Fallback languages shown in priority order
-- **Auto-detection**: Extension detects your locale and suggests appropriate languages
-- **Country-specific**: Suggests languages commonly understood in your region
-
-### Quality Indicators
-- 🎯 **Perfect match** (moviehash sync)
-- ✓ **Trusted uploader**
-- 🎬 **HD quality**
-- ♿ **Hearing impaired**
-- 🤖 **AI translated**
-- ⚙️ **Machine translated**
-
-## 📸 Screenshots
-
-| Main Interface | Configuration | Search Results |
-|----------------|---------------|----------------|
-| ![Main](docs/screenshots/main-interface.png) | ![Config](docs/screenshots/configuration.png) | ![Auto Update](docs/screenshots/auto-update.png) |
-
-## 🔧 Configuration Options
-
-- **Download Behavior**: Load+Save or Manual download
-- **Language Codes**: Add language codes to filenames (e.g., `movie.en.srt`)
-- **Tag Removal**: Clean subtitle formatting tags
-- **Working Directory**: Custom location for subtitle storage
-- **Auto-updates**: Enable/disable automatic update checks
-
-## 🌍 Supported Languages
-
-The extension supports 100+ languages including:
-- **Major Languages**: English, Spanish, French, German, Italian, Portuguese, Russian, Chinese, Japanese, Korean
-- **Regional Variants**: Brazilian Portuguese, Latin Spanish, Simplified/Traditional Chinese
-- **European Languages**: All EU languages plus Nordic, Slavic, and Baltic languages
-- **Global Languages**: Arabic, Hindi, Hebrew, Persian, Thai, Vietnamese, and many more
-
-Full list available in the [language documentation](docs/languages.md).
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**"No results found"**
-- Ensure video file is local for hash search
-- Try name search with manual title entry
-- Check if subtitle exists on OpenSubtitles.com
-
-**"Authentication failed"**
-- Verify OpenSubtitles.com credentials
-- Check internet connection
-- Ensure account is active (not banned)
-
-**"Download failed"**
-- Check download quota (free accounts have daily limits)
-- Verify curl is installed: `curl --version`
-- Try again later if server is busy
-
-**Extension not visible**
-- Restart VLC completely
-- Check file is in correct extensions directory
-- Verify VLC version 3.0+
-
-### Debug Mode
-Enable debug logging in VLC:
-```
-Tools → Preferences → Show settings: All → Advanced → Logger verbosity: 2 (Debug)
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-```bash
-git clone https://github.com/opensubtitles/vlsub-opensubtitles-com.git
-cd vlsub-opensubtitles-com
-# Edit vlsubcom.lua
-# Test in VLC
-```
-
-### Reporting Issues
-- 🐛 [Bug Reports](https://github.com/opensubtitles/vlsub-opensubtitles-com/issues/new?template=bug_report.md)
-- 💡 [Feature Requests](https://github.com/opensubtitles/vlsub-opensubtitles-com/issues/new?template=feature_request.md)
-- 💬 [Discussions](https://github.com/opensubtitles/vlsub-opensubtitles-com/discussions)
-
-## 📄 License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **OpenSubtitles.com** for providing the subtitle database and API
-- **VideoLAN Team** for VLC Media Player
-- **Original vlsub authors** for inspiration
-- **GuessIt project** for metadata extraction
-- **Community contributors** for testing and feedback
-
-## 💝 Support the Project
-
-- ⭐ **Star this repository** to show your support
-- 🐛 **Report bugs** to help improve the extension
-- 💡 **Suggest features** for future releases
-- 🔗 **Share** with other VLC users
-- ☕ **Support OpenSubtitles.com** with a [donation](https://www.opensubtitles.com/support_us/)
-
-## 📞 Support
-
-- 📖 **Documentation**: [docs/](docs/)
-- 🆘 **FAQ**: [docs/faq.md](docs/faq.md)
-- 💬 **Community**: [GitHub Discussions](https://github.com/opensubtitles/vlsub-opensubtitles-com/discussions)
-- 📧 **OpenSubtitles Support**: [Contact](https://www.opensubtitles.com/contact)
-
----
-
-<div align="center">
-<strong>Made with ❤️ for the VLC community</strong><br>
-<a href="https://www.opensubtitles.com">OpenSubtitles.com</a> • 
-<a href="https://www.videolan.org">VLC Media Player</a> • 
-<a href="https://github.com/opensubtitles/vlsub-opensubtitles-com">GitHub</a>
-</div>
+GPL v3. See [LICENSE](LICENSE).
