@@ -860,7 +860,7 @@ PROVIDERS                   subdl &middot; Addic7ed &middot; Podnapisi
     <article class="step" role="listitem">
       <div class="step-num">Step 03</div>
       <h3>Point at Bazarr+</h3>
-      <p>Click <em>&#9881;&#65039; Config</em> inside the extension window. Paste your Bazarr+ <em>Base URL</em> , just scheme, host and port: <span class="mono">http://host:6767</span>. No path suffix. Then paste the API token from Bazarr+&rsquo;s <em>Settings &rarr; External Integration</em>. Save. Login runs instantly and the session is cached on disk.</p>
+      <p>Click <em>&#9881;&#65039; Config</em> inside the extension window. Paste your Bazarr+ <em>Base URL</em> , just scheme, host and port: <span class="mono">http://host:6767</span>. No path suffix. Then paste an API key from Bazarr+&rsquo;s <em>Distribution Hub &rarr; API Keys</em> (<em>Settings &rarr; External Integration</em> on Bazarr+ 2.2 and 2.3). Save. Login runs instantly and the session is cached on disk.</p>
       <div class="path">Config<span class="arrow">&rarr;</span>Paste URL + Token<span class="arrow">&rarr;</span>Save</div>
     </article>
   </div>
@@ -893,15 +893,15 @@ PROVIDERS                   subdl &middot; Addic7ed &middot; Podnapisi
       </div>
       <div class="row">
         <dt>Req 02 &middot; Backend</dt>
-        <dd>Bazarr<span class="plus" style="background:var(--acc);padding:0 4px">+</span> <b>2.2+</b> reachable over HTTP(S) <span class="mono">LAN-ok</span><span class="rd-why">Needs the External Integration endpoint enabled. Self-signed TLS is fine on a private network; VLC&rsquo;s stream module will prompt once and remember.</span></dd>
+        <dd>Bazarr<span class="plus" style="background:var(--acc);padding:0 4px">+</span> <b>2.2+</b> reachable over HTTP(S) <span class="mono">LAN-ok</span><span class="rd-why">Needs the endpoint enabled under Distribution Hub &rarr; Settings (Settings &rarr; External Integration on 2.2 and 2.3). Self-signed TLS is fine on a private network; VLC&rsquo;s stream module will prompt once and remember.</span></dd>
       </div>
       <div class="row">
         <dt>Req 03 &middot; Providers</dt>
-        <dd>At least <b>one provider</b> enabled in Bazarr+ <span class="mono">Settings &rarr; Subtitles Sources</span><span class="rd-why">Bazarr+ is the thing that actually talks to subdl / Addic7ed / Podnapisi / etc. If nothing is enabled there, searches return zero results.</span></dd>
+        <dd>At least <b>one provider</b> enabled in Bazarr+ <span class="mono">Subtitle Hub &rarr; My Providers</span><span class="rd-why">Bazarr+ is the thing that actually talks to subdl / Addic7ed / Podnapisi / etc. If nothing is enabled there, searches return zero results. On 2.2 the page is Settings &rarr; Subtitle Sources.</span></dd>
       </div>
       <div class="row">
         <dt>Req 04 &middot; Token</dt>
-        <dd>Bazarr+ <b>API Token</b> pasted into the extension config<span class="rd-why">Shown in Bazarr+ Settings &rarr; External Integration. The extension sends it as the <span class="mono">Api-Key</span> header on every request.</span></dd>
+        <dd>Bazarr+ <b>API Token</b> pasted into the extension config<span class="rd-why">Create one in Bazarr+ Distribution Hub &rarr; API Keys (Settings &rarr; External Integration on 2.2 and 2.3). The extension sends it as the <span class="mono">Api-Key</span> header on every request.</span></dd>
       </div>
     </dl>
   </div>
@@ -966,7 +966,7 @@ PROVIDERS                   subdl &middot; Addic7ed &middot; Podnapisi
       <div class="trbl-code"><b>401</b> &nbsp; UNAUTHORIZED</div>
       <div class="trbl-body">
         <h4>API token mismatch</h4>
-        <p>The Bazarr+ token pasted into the extension doesn&rsquo;t match the one in Bazarr+&rsquo;s <span class="mono">Settings &rarr; External Integration</span>. Regenerate the token in Bazarr+, paste it back in <em>Config</em>, Save. The extension re-authenticates immediately.</p>
+        <p>The Bazarr+ token pasted into the extension doesn&rsquo;t match a key in Bazarr+&rsquo;s <span class="mono">Distribution Hub &rarr; API Keys</span>. Create a new key or rotate the existing one in Bazarr+, paste it back in <em>Config</em>, Save. The extension re-authenticates immediately.</p>
       </div>
     </div>
     <div class="trbl-row">
