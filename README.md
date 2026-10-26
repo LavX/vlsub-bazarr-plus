@@ -7,8 +7,13 @@ Hard fork for the Bazarr+ compat endpoint. Not tracking upstream.
 ## Prerequisites
 
 - VLC 3.0 or newer (native, Flatpak `org.videolan.VLC`, or Snap `vlc`).
-- A running Bazarr+ instance with the **External Integration** endpoint enabled
-  (Settings → External Integration → toggle on, copy the API token, restart Bazarr+).
+- A running Bazarr+ instance with the **Distribution Hub** endpoint enabled.
+  In Bazarr+, open **Distribution Hub → Settings**, turn on the consent switch and
+  **Enable the Distribution Hub endpoint**, then click **Save settings**. If a
+  **Restart required** banner appears, restart Bazarr+.
+- A Bazarr+ API key. Open **Distribution Hub → API Keys** and click **New key** to give
+  VLC a key of its own. The token is shown once, so copy it then. You can also use
+  **Reveal token** on the **Default (legacy token)** key.
 
 ## Install
 
@@ -46,7 +51,7 @@ Restart VLC.
 2. Click **⚙️ Config**.
 3. Fill in:
    - **Bazarr+ Base URL**: `http://<bazarr-host>:6767`
-   - **Bazarr+ API Key**: the token from Bazarr+ Settings → External Integration.
+   - **Bazarr+ API Key**: the token from Bazarr+ **Distribution Hub → API Keys**.
 4. Click **💾 Save**.
 
 If the credentials are valid you get `Login successful` and quota info. The session is cached on disk so subsequent launches don't re-authenticate.
@@ -77,10 +82,10 @@ Indicators:
 |---|---|
 | **VLSub Bazarr+ missing from View menu** | VLC only scans extensions at launch. Fully quit VLC (`pkill -f vlc.bin` for Flatpak) and relaunch. |
 | **Config dialog freezes after Save** | Wrong URL or port. Worst-case freeze is 5 s. Check **Tools → Messages** (verbosity 2) for the `[VLSub] POST …` line, fix the URL, Save again. |
-| **Login failed (401)** | API token doesn't match. Regenerate in Bazarr+ Settings → External Integration and re-paste. |
+| **Login failed (401)** | API token doesn't match. Create a new key or rotate the existing one in Bazarr+ **Distribution Hub → API Keys**, then re-paste. |
 | **Login failed (405 / 404)** | Base URL is wrong, or Bazarr+ compat endpoint isn't enabled. Base URL is just the host and port, e.g. `http://host:6767`, no path suffix. |
 | **No results** | Bazarr+ returned empty. Check Bazarr+ logs; providers may have errored or timed out. 503 with `x-reason: upstream` means all configured providers failed. |
-| **Results look stale** | Bazarr+ caches search results server-side. Adjust `cache_ttl_seconds` in Bazarr+ `External Integration` settings. |
+| **Results look stale** | Bazarr+ caches search results server-side, 30 minutes by default. The Distribution Hub has no control for it: set `compat_endpoint.cache_ttl_seconds` in Bazarr+'s `config.yaml` while Bazarr+ is stopped. |
 | **Download link 404** | `file_id` expired (60 min default TTL). Re-search. |
 
 To capture a live debug log:
